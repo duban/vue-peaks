@@ -1,16 +1,18 @@
 {
   "scripts": {
-    "start": "vue-cli-service serve --open",
     "build": "vue-cli-service build",
+    "start": "vue-cli-service serve --open",
     "test": "exit 0"
-  },
-  "devDependencies": {
-    "@vue/cli": "^4.5.13",
-    "@vue/cli-service-global": "^4.5.13"
   },
   "dependencies": {
     "peaks.js": "github:oncletom/peaks.js#feature/esm",
     "vue": "^2.6.14",
+    "vue-router": "^3.2.0",
     "vuex": "^3.6.2"
+  },
+  "devDependencies": {
+    "@vue/cli": "^4.5.13",
+    "@vue/cli-plugin-router": "~4.5.0",
+    "@vue/cli-service-global": "^4.5.13"
   }
 }

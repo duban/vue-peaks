@@ -11,7 +11,9 @@ export default {
     //
     currentTime: 0.00,
     // Main track events
-    points: []
+    points: [],
+    segments: [],
+    filters: {}
   }),
 
   getters: {
@@ -26,6 +28,12 @@ export default {
     },
     points (state) {
       return state.points.sort((a, b) => a.time - b.time)
+    },
+    segments (state) {
+      return state.segments.sort((a, b) => a.startTime - b.startTime)
+    },
+    filters (state) {
+      return state.filters
     }
   },
 
@@ -44,13 +52,23 @@ export default {
 
       Vue.delete(state.points, index)
     },
-
     addPoint (state, point) {
       state.points = [...state.points, point]
     },
-
+    addFilter (state, filter) {
+      state.filters = filter
+    },
+    addFilters (state, filters) {
+      state.segments = [...state.filters, ...filters]
+    },
+    addSegment (state, segment) {
+      state.segments = [...state.segments, segment]
+    },
     addPoints (state, points) {
       state.points = [...state.points, ...points]
+    },
+    addSegments (state, segments) {
+      state.segments = [...state.segments, ...segments]
     },
 
     // We can use `intro` or `extro` as a Type

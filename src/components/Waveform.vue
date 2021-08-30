@@ -1,61 +1,70 @@
 <template>
   <div>
     <ol class="tracks">
-      <li>
-        <p><strong>Intro Track</strong></p>
+<!--      <li>-->
+<!--        <p><strong>Intro Track</strong></p>-->
 
-        <select :value="introTrack" @change="setTrack({ type: 'intro', src: $event.target.value })">
-          <option value="" />
-          <option v-for="(track, i) in transitionTracks" :key="i">
-            {{ track }}
-          </option>
-        </select>
+<!--        <select :value="introTrack" @change="setTrack({ type: 'intro', src: $event.target.value })">-->
+<!--          <option value="" />-->
+<!--          <option v-for="(track, i) in transitionTracks" :key="i">-->
+<!--            {{ track }}-->
+<!--          </option>-->
+<!--        </select>-->
 
-        <audio ref="introTrack" v-if="introTrack">
-          <source :src="introTrack" type="audio/mpeg">
-        </audio>
-      </li>
-      <li>
-        <p><strong>Main Track</strong></p>
-        <code>{{ mainTrack }}</code>
+<!--        <audio ref="introTrack" v-if="introTrack">-->
+<!--          <source :src="introTrack" type="audio/mpeg">-->
+<!--        </audio>-->
+<!--      </li>-->
+<!--      <li>-->
+<!--        <p><strong>Main Track</strong></p>-->
+<!--        <code>{{ mainTrack }}</code>-->
+<!--      </li>-->
+<!--      <li>-->
+<!--        <p><strong>Extro Track</strong></p>-->
 
-        <audio ref="mainTrack" controls>
-          <source :src="mainTrack" type="audio/mpeg">
-        </audio>
-      </li>
-      <li>
-        <p><strong>Extro Track</strong></p>
+<!--        <select :value="extroTrack" @change="setTrack({ type: 'extro', src: $event.target.value })">-->
+<!--          <option value="" />-->
+<!--          <option v-for="(track, i) in transitionTracks" :key="i">-->
+<!--            {{ track }}-->
+<!--          </option>-->
+<!--        </select>-->
 
-        <select :value="extroTrack" @change="setTrack({ type: 'extro', src: $event.target.value })">
-          <option value="" />
-          <option v-for="(track, i) in transitionTracks" :key="i">
-            {{ track }}
-          </option>
-        </select>
-
-        <audio ref="extroTrack" v-if="extroTrack">
-          <source :src="extroTrack" type="audio/mpeg">
-        </audio>
-      </li>
+<!--        <audio ref="extroTrack" v-if="extroTrack">-->
+<!--          <source :src="extroTrack" type="audio/mpeg">-->
+<!--        </audio>-->
+<!--      </li>-->
     </ol>
 
 
     <div class="peaks-container">
-      <div class="waveform waveform--small" ref="overview"></div>
       <div class="waveform" ref="zoomview"></div>
+      <div class="waveform waveform--small" ref="overview"></div>
+<!--      <audio ref="mainTrack" controls>-->
+<!--        <source :src="mainTrack" type="audio/mpeg">-->
+<!--      </audio>-->
+      <div>
+        <audio ref="mainTrack" controls>
+          <source :src="mainTrack" type="audio/mpeg">
+        </audio>
+      </div>
     </div>
+<!--    <div>-->
+<!--      <audio ref="mainTrack" controls>-->
+<!--        <source :src="mainTrack" type="audio/mpeg">-->
+<!--      </audio>-->
+<!--    </div>-->
 
-    <ul class="timed-events">
-      <li v-for="point in points" :key="point.id" class="point" :style="'--bg-color: ' + point.color">
-        <header>
-          <strong class="point__title clickable" @click="setPointAtCurrentTime(point.id)">{{ point.labelText }}</strong>
+<!--    <ul class="timed-events">-->
+<!--      <li v-for="point in points" :key="point.id" class="point" :style="'&#45;&#45;bg-color: ' + point.color">-->
+<!--        <header>-->
+<!--          <strong class="point__title clickable" @click="setPointAtCurrentTime(point.id)">{{ point.labelText }}</strong>-->
 
-          <span v-if="point.removable" @click.stop="removePoint(point.id)" aria-label="Delete">🗑</span>
-        </header>
+<!--          <span v-if="point.removable" @click.stop="removePoint(point.id)" aria-label="Delete">🗑</span>-->
+<!--        </header>-->
 
-        <time :datetime="point.time">{{ point.time }}</time>
-      </li>
-    </ul>
+<!--        <time :datetime="point.time">{{ point.time }}</time>-->
+<!--      </li>-->
+<!--    </ul>-->
   </div>
 </template>
 
@@ -68,6 +77,7 @@ const defaultOptions = {
   highlightOffset: 0,
   zoomWaveformColor: '#e2172d',
 }
+const audioContext = new AudioContext()
 
 export default {
   props: {
@@ -75,10 +85,10 @@ export default {
       type: String,
       required: true
     },
-    dataFile: {
-      type: String,
-      required: true
-    },
+    // dataFile: {
+    //   type: String,
+    //   required: true
+    // },
     transitionTracks: Array
   },
 
@@ -94,15 +104,17 @@ export default {
   // Temporal data (points and segments) are store in a store (Vuex for instance)
   // We will subscribe to its changes to keep Peaks in sync with our reactive data
   computed: {
-    ...mapGetters('programme', ['points', 'introTrack', 'extroTrack'])
+    ...mapGetters('programme', ['points', 'segments','introTrack', 'extroTrack'])
   },
 
   mounted () {
     this.$nextTick(() => init({
       ...defaultOptions,
       mediaElement: this.$refs.mainTrack,
-      dataUri: {
-        arraybuffer: this.$props.dataFile
+      webAudio: {
+        audioContext: audioContext,
+        scale: 128,
+        multiChannel: false
       },
       containers: {
         overview: this.$refs.overview,
@@ -149,6 +161,11 @@ export default {
         lineWidth: 3
       }))
 
+      // We add store-based events into peak on load
+      this.segments.forEach(segment => peaks.segments.add({
+        ...segment
+      }))
+
       // We listen to Peaks points change within the Vue.js app
       peaks.on('points.dragmove', ({ id, time:newTime }) => {
         const time = parseFloat(newTime.toFixed(3))
@@ -167,15 +184,38 @@ export default {
         }
       })
 
+      // When a new segment is added, we sync it back to Peaks
+      this.$store.subscribe(({ type, payload }) => {
+        if (['programme/addSegment', 'programme/addSegments'].includes(type)) {
+          peaks.segments.add(payload)
+        }
+      })
+
       // When a new point is remove, we sync it back to Peaks
       this.$store.subscribe(({ type, payload: pointId }) => {
         if (type === 'programme/removePoint') {
           peaks.points.removeById(pointId)
         }
       })
+      // peaks.views.getView('zoomview').setWaveformColor('blue')
+      peaks.views.getView('zoomview').showPlayheadTime(true)
+      // peaks.views.getView('zoomview').setPlayedWaveformColor('#800080'); // Purple
+      peaks.views.getView('overview').enableMarkerEditing(true);
+      // peaks.segments.add([{
+      //   startTime: 2.0,
+      //   endTime: 6.0,
+      //   labelText: 'Positive',
+      //   editable: true
+      // },{
+      //   startTime: 10.0,
+      //   endTime: 15.0,
+      //   labelText: 'Negative',
+      //   editable: true
+      // }]);
+
 
       // We remove the X-Axis in the Overview
-      peaks.views.getView('overview')._axisLayer.remove()
+      // peaks.views.getView('overview')._axisLayer.remove()
     },
 
     selectPoint (id) {
@@ -211,7 +251,7 @@ export default {
   display: flex;
   flex-flow: column;
   justify-content: space-between;
-  height: 200px;
+  height: 500px;
   margin: 3em 0;
 }
 
@@ -221,7 +261,7 @@ export default {
 }
 
 .waveform--small {
-  flex: 0 0 25%;
+  flex: 0 0 35%;
 }
 
 .clickable {
